@@ -8,12 +8,12 @@
 	#size-cells = <0x02>;
 
 	chosen {
-		bootargs = "console=tty0 console=ttyMT0,921600n1 root=/dev/ram initrd=0x84000000,0x400000 loglevel=8";
-		atag,videolfb-fb_base = <0x9e800000>;
-		atag,videolfb-islcmfound = <0x01>;
+		bootargs = "console=tty0 console=ttyMT0,921600n1 root=/dev/ram initrd=0x84000000,0x400000 loglevel=4 bootopt=64S3,32S1,32S1 androidboot.selinux=permissive buildvariant=userdebug quiet numa=fake=238M,238M,238M,238M,2M,2M,2M,2M nokaslr vmalloc=194M highmem=702M coherent_pool=2M cma=2M maxcpus=8 nr_cpus=8 isolcpus=4,5,6,7 rcu_nocbs=4,5,6,7 nohz_full=4,5,6,7 kthread_cpus=0,1,2,3";
+		atag,videolfb-base = <0x9e800000>;
+     atag,videolfb-islcmfound = <0x01>;
 		atag,videolfb-fps = <0x1770>;
 		atag,videolfb-vramSize = <0x1800000>;
-		atag,videolfb-lcmname = "nt35590_AUO";
+		atag,videolfb-lcmname = "";
 	};
 
 	mtk-msdc.0 {
@@ -101,14 +101,18 @@
 		#size-cells = <0x00>;
 		enable-method = "mediatek,mt6580-smp";
 
+     /* Property bindings matching your CPU core configuration requirements */
+     linux,nr_cpus = <4>;
+     linux,kthread_cpus = <0x3>; /* Restricts core background tasks to CPU0 and CPU1 */
+
 		cpu@0 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a7";
 			reg = <0x00>;
 			clock-frequency = <0x4d7c6918>;
 			operating-points-v2 = <0x51>;
-			capacity-dmips-mhz = <0x3ff>;
-			clock-latency-ns = <0x1389>;
+			capacity-dmips-mhz = <0x400>;
+			clock-latency-ns = <0x3e8>;
 			#cooling-cells = <0x02>;
 		};
 
@@ -118,8 +122,8 @@
 			reg = <0x01>;
 			clock-frequency = <0x4d7c6918>;
 			operating-points-v2 = <0x51>;
-			capacity-dmips-mhz = <0x3ff>;
-			clock-latency-ns = <0x1389>;
+			capacity-dmips-mhz = <0x400>;
+			clock-latency-ns = <0x3e8>;
 			#cooling-cells = <0x02>;
 		};
 
@@ -129,8 +133,8 @@
 			reg = <0x02>;
 			clock-frequency = <0x4d7c6918>;
 			operating-points-v2 = <0x51>;
-			capacity-dmips-mhz = <0x3ff>;
-			clock-latency-ns = <0x1389>;
+			capacity-dmips-mhz = <0x400>;
+			clock-latency-ns = <0x3e8>;
 			#cooling-cells = <0x02>;
 		};
 
@@ -140,21 +144,36 @@
 			reg = <0x03>;
 			clock-frequency = <0x4d7c6918>;
 			operating-points-v2 = <0x51>;
-			capacity-dmips-mhz = <0x3ff>;
-			clock-latency-ns = <0x1389>;
+			capacity-dmips-mhz = <0x400>;
+			clock-latency-ns = <0x3e8>;
 			#cooling-cells = <0x02>;
 		};
 	};
 
-	memory@80000000 {
-		device_type = "memory";
-		reg = <0x00 0x80000000 0x00 0x1e800000>;
-	};
+   memory@80000000 {
+     device_type = "memory";
+     /* Split into 4 banks of 238MB (0x0ee00000) and 4 banks of 2MB (0x00200000) */
+     reg = <0x00 0x80000000 0x00 0x0ee00000>, /* Bank 1: 238MB */
+           <0x00 0x8ee00000 0x00 0x0ee00000>, /* Bank 2: 238MB */
+           <0x00 0x9dc00000 0x00 0x0ee00000>, /* Bank 3: 238MB */
+           <0x00 0xaca00000 0x00 0x0ee00000>, /* Bank 4: 238MB */
+           <0x00 0xbb800000 0x00 0x00200000>, /* Cache 1: 2MB */
+           <0x00 0xbba00000 0x00 0x00200000>, /* Cache 2: 2MB */
+           <0x00 0xbbc00000 0x00 0x00200000>, /* Cache 3: 2MB */
+           <0x00 0xbbe00000 0x00 0x00200000>; /* Cache 4: 2MB */
+   };
 
-  reserved-memory {
+	reserved-memory {
 		#address-cells = <0x02>;
 		#size-cells = <0x02>;
 		ranges;
+
+     linux,cma {
+        compatible = "shared-dma-pool";
+        alloc-ranges = <0x00 0x80000000 0x00 0x1e800000>;
+        size = <0x00 0x200000>; /* 2MB size */
+        linux,cma-default;
+     };
 
 		consys-reserve-memory {
 			compatible = "mediatek,consys-reserve-memory";
@@ -171,28 +190,21 @@
 			alloc-ranges = <0x00 0x80000000 0x00 0x80000000>;
 		};
 
-    /*
-    pstore-reserved-memory@83f10000 {
-	    compatible = "mediatek,pstore";
-	    reg = <0x00 0x83f10000 0x00 0xe0000>;
-    };
-    */
+		pstore-reserved-memory@83f10000 {
+			compatible = "mediatek,pstore";
+			reg = <0x00 0x83f10000 0x00 0xe0000>;
+		};
 
-    /*
-    ram_console-reserved-memory@83f00000 {
-      compatible = "mediatek,ram_console";
-      reg = <0x00 0x83f00000 0x00 0x10000>;
-    };
-    */
+		ram_console-reserved-memory@83f00000 {
+			compatible = "mediatek,ram_console";
+			reg = <0x00 0x83f00000 0x00 0x10000>;
+		};
 
-    /*
-    minirdump-reserved-memory@83ff0000 {
-      compatible = "mediatek, minirdump";
-      reg = <0x00 0x83ff0000 0x00 0x10000>;
-    };
-    */
-
-  };
+		minirdump-reserved-memory@83ff0000 {
+			compatible = "mediatek, minirdump";
+			reg = <0x00 0x83ff0000 0x00 0x10000>;
+		};
+	};
 
 	interrupt-controller@10210000 {
 		compatible = "arm,cortex-a7-gic";
